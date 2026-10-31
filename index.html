@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LD4 LMS- Portal Belajar Modern</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    /* Menyembunyikan elemen bawaan Blogger untuk membuahkan halaman Full Page */
+    #header-wrapper, #sidebar-wrapper, .post-header-line, .post-footer, #comments, .blog-pager, .breadcrumbs, #footer-wrapper {
+      display: none !important;
+    }
+    .main-inner, .content-outer, .body-outer {
+      padding: 0 !important;
+      margin: 0 !important;
+      max-width: 100% !important;
+    }
+    /* Sembunyikan scrollbar tapi pertahankan fungsi scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Animasi Transisi Halus */
+    .fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+
+  <!-- BLOGGER THUMBNAIL (SEO Optimasi Blogger) -->
+  <div class="hidden" id="blogger-thumbnail">
+    <img src="https://images.unsplash.com/photo-1501504905252-473c47e087f8?auto=format&fit=crop&w=400&h=300&q=80" alt="LD4 LMS Banner">
+    <p>Aplikasi Learning Management System (LMS) LD4 modern untuk menunjang pembelajaran interaktif, pengumpulan tugas daring, dan kolaborasi sekolah.</p>
+  </div>
+
+  <!-- TOAST SYSTEM -->
+  <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- LAYOUT UTAMA -->
+  <div id="app-root" class="min-h-screen flex flex-col">
+    <!-- APP CONTAINER -->
+    <div id="app-content" class="w-full min-h-screen flex flex-col">
+      <!-- Loading State Awal -->
+      <div class="flex-1 flex flex-col items-center justify-center p-8">
+        <div class="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-slate-600 font-medium">Memuat sistem LD4 LMS...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // KONFIGURASI JALUR DATA (API DRIVEN)
+    // UBAH IS_PREVIEW KE false JIKA AKAN DI-DEPLOY KE BLOGGER DENGAN INTEGRASI WEBAPP GAS
+    const IS_PREVIEW = false; 
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyMIV9EgPtkiG7MIBFsVB7j4SAtAyN53fWGivx7i2ty2TO9afKb89it3Y07yG9u21WEjQ/exec";
+
+    // DATABASE CADANGAN/PREVIEW (Sesuai spesifikasi untuk Preview Mode)
+    let db = {
+      users: [
+        { id: "U001", username: "admin", password: "edudigital", nama_lengkap: "Pak Budi Utomo, M.Pd.", role: "guru", kelas: "Semua Kelas" },
+        { id: "U002", username: "peserta", password: "edudigital", nama_lengkap: "Rian Hidayat", role: "siswa", kelas: "XI-RPL-1" },
+        { id: "U003", username: "siswa2", password: "edudigital", nama_lengkap: "Siti Aminah", role: "siswa", kelas: "XI-RPL-1" }
+      ],
+      materi: [
+        { 
+          id: "M001", 
+          judul: "Pengenalan HTML5 & CSS3 Modern", 
+          deskripsi: "Materi dasar pembuatan website responsif menggunakan standar HTML5 dan kerangka kerja CSS modern.", 
+          video_url: "https://www.youtube.com/embed/NDX6T-X2o7Q", 
+          file_drive_url: "https://drive.google.com/file/d/1DummyFileMateriHTML/view", 
+          tanggal_dibuat: "2026-07-10 08:30" 
+        },
+        { 
+          id: "M002", 
+          judul: "Konsep Dasar Logika Pemrograman Javascript", 
+          deskripsi: "Memahami variabel, kondisi, perulangan, dan fungsi dalam pemrograman Javascript untuk kebutuhan interaktivitas web.", 
+          video_url: "https://www.youtube.com/embed/W6NZfCO5SIk", 
+          file_drive_url: "https://drive.google.com/file/d/1DummyFileMateriJS/view", 
+          tanggal_dibuat: "2026-07-12 09:15" 
+        }
+      ],
+      tugas: [
+        { 
+          id: "T001", 
+          judul: "Tugas Mandiri 1: Membuat Halaman Profil Sederhana", 
+          deskripsi: "Buatlah satu halaman biodata diri menggunakan HTML murni dan hias menggunakan CSS agar terlihat menarik dan profesional.", 
+          tenggat_waktu: "2026-07-25T23:59", 
+          file_pendukung_url: "https://drive.google.com/file/d/1DummyPendukungTugas/view", 
+          tanggal_dibuat: "2026-07-11 10:00" 
+        }
+      ],
+      pengumpulan_tugas: [
+        { 
+          id: "P001", 
+          tugas_id: "T001", 
+          tugas_judul: "Tugas Mandiri 1: Membuat Halaman Profil Sederhana", 
+          siswa_id: "U002", 
+          siswa_nama: "Rian Hidayat", 
+          siswa_kelas: "XI-RPL-1", 
+          file_tugas_url: "https://drive.google.com/file/d/1DummyJawabanSiswaRian/view", 
+          nilai: "92", 
+          feedback: "Pekerjaan luar biasa! Desain rapi dan struktur HTML sangat tertata sesuai instruksi.", 
+          tanggal_dikirim: "2026-07-12 14:20", 
+          status: "Selesai" 
+        }
+      ],
+      pengumuman: [
+        { id: "N001", judul: "Selamat Datang di LD4 LMS", isi_pengumuman: "Selamat menggunakan portal pembelajaran LD4 LMS yang modern, cepat, dan responsif.", tanggal_dibuat: "2026-07-15 07:00" }
+      ]
+    };
+
+    // STATE UTAMA APLIKASI
+    let state = {
+      currentUser: null,
+      activeView: "login", // login, guru_dashboard, siswa_dashboard
+      activeSubView: "home", // home, materi, tugas, koreksi, siswa
+      selectedItem: null 
+    };
+
+    async function callGAS(action, payload = {}) {
+      if (IS_PREVIEW) {
+        return null; // Dilewati jika dalam mode pratinjau lokal
+      }
+      try {
+        const response = await fetch(GAS_URL, {
+          method: "POST",
+          mode: "cors",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify({ action: action, data: payload })
+        });
+        if (!response.ok) {
+          throw new Error("Respon jaringan gagal.");
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Kesalahan koneksi API GAS:", error);
+        throw error;
+      }
+    }
+
+    function showToast(message, type = "success") {
+      const container = document.getElementById("toast-container");
+      const toast = document.createElement("div");
+      toast.className = `flex items-center gap-3 p-4 rounded-xl shadow-lg border text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto fade-in max-w-sm ${
+        type === "success" 
+          ? "bg-emerald-50 border-emerald-100 text-emerald-800" 
+          : type === "error" 
+          ? "bg-rose-50 border-rose-100 text-rose-800" 
+          : "bg-teal-50 border-teal-100 text-teal-850"
+      }`;
+
+      const icon = type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info";
+      toast.innerHTML = `
+        <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
+        <div class="flex-1">${message}</div>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.classList.remove("opacity-0", "translate-y-2");
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-2");
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // SCREEN ROUTING
+    function switchView(view, subView = "home") {
+      state.activeView = view;
+      state.activeSubView = subView;
+      renderApp();
+    }
+
+    // PROSES AUTENTIKASI MASUK
+    async function handleLogin(username, password) {
+      if (IS_PREVIEW) {
+        const user = db.users.find(u => u.username === username && u.password === password);
+        if (user) {
+          state.currentUser = user;
+          showToast(`Selamat datang kembali, ${user.nama_lengkap}`);
+          if (user.role === "guru") {
+            switchView("guru_dashboard", "home");
+          } else {
+            switchView("siswa_dashboard", "home");
+          }
+        } else {
+          showToast("Kombinasi Username dan Password Anda tidak valid!", "error");
+        }
+      } else {
+        showLoadingState(true, "Memvalidasi kredensial masuk...");
+        try {
+          const res = await callGAS("login", { username, password });
+          showLoadingState(false);
+          if (res && res.success) {
+            state.currentUser = res.user;
+            showToast(`Selamat datang kembali, ${res.user.nama_lengkap}`);
+            if (res.user.role === "guru") {
+              switchView("guru_dashboard", "home");
+            } else {
+              switchView("siswa_dashboard", "home");
+            }
+          } else {
+            showToast(res ? res.message : "Gagal memproses autentikasi.", "error");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Koneksi API terputus atau URL salah.", "error");
+        }
+      }
+    }
+
+    function handleLogout() {
+      state.currentUser = null;
+      showToast("Anda telah keluar dari aplikasi.", "info");
+      switchView("login");
+    }
+
+    function showLoadingState(show, text = "Memproses...") {
+      const overlay = document.getElementById("loading-overlay");
+      if (overlay) {
+        if (show) {
+          overlay.querySelector("p").innerText = text;
+          overlay.classList.remove("hidden");
+        } else {
+          overlay.classList.add("hidden");
+        }
+      }
+    }
+
+    function renderLoginView() {
+      return `
+        <div class="flex-1 flex flex-col md:flex-row min-h-screen">
+          <!-- Sisi Ilustrasi Kiri -->
+          <div class="hidden md:flex md:w-1/2 bg-gradient-to-tr from-emerald-700 via-emerald-600 to-teal-500 text-white p-12 flex-col justify-between relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <div class="flex items-center gap-3 z-10">
+              <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md">
+                <i data-lucide="book-up-2" class="w-8 h-8 text-white"></i>
+              </div>
+              <span class="text-2xl font-bold tracking-tight">LD4 LMS</span>
+            </div>
+            
+            <div class="my-auto max-w-md z-10">
+              <h2 class="text-4xl font-extrabold leading-tight mb-4">Membangun Transformasi Digital Pendidikan</h2>
+              <p class="text-emerald-100 leading-relaxed text-lg">Platform manajemen pembelajaran modern yang menyatukan guru dan murid dalam satu ekosistem interaktif yang cepat, aman, dan mudah digunakan.</p>
+            </div>
+
+            <div class="flex items-center gap-4 z-10 text-sm text-emerald-200">
+              <span>© 2026 uptdsdnld4. All Rights Reserved.</span>
+            </div>
+          </div>
+
+          <!-- Sisi Form Kanan -->
+          <div class="flex-1 flex flex-col justify-center px-6 py-12 md:px-16 lg:px-24 bg-white relative">
+            <!-- Overlay Loading Dalam Form -->
+            <div id="loading-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center p-4">
+              <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="text-sm font-semibold text-slate-700">Sedang memproses...</p>
+            </div>
+
+            <div class="max-w-md w-full mx-auto">
+              <div class="md:hidden flex items-center gap-2 mb-8">
+                <div class="bg-emerald-600 p-2 rounded-lg text-white">
+                  <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                </div>
+                <span class="text-xl font-bold">LMS LD4</span>
+              </div>
+
+              <h2 class="text-3xl font-extrabold text-slate-900 tracking-tight">Selamat Datang</h2>
+              <p class="mt-2 text-sm text-slate-500 font-medium">Silakan masuk menggunakan akun Anda</p>
+
+              <!-- FORM LOGIN -->
+              <form id="login-form" class="mt-8 space-y-6" onsubmit="event.preventDefault(); const u = document.getElementById('username').value; const p = document.getElementById('password').value; handleLogin(u,p);">
+                <div>
+                  <label for="username" class="block text-sm font-semibold text-slate-700">Username</label>
+                  <div class="mt-1.5 relative rounded-xl shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <i data-lucide="user" class="w-5 h-5"></i>
+                    </div>
+                    <input id="username" name="username" type="text" required class="block w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-xl bg-slate-50/50 text-slate-900 placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition" placeholder="Masukkan username Anda">
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between items-center">
+                    <label for="password" class="block text-sm font-semibold text-slate-700">Kata Sandi</label>
+                  </div>
+                  <div class="mt-1.5 relative rounded-xl shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <i data-lucide="lock" class="w-5 h-5"></i>
+                    </div>
+                    <input id="password" name="password" type="password" required class="block w-full pl-11 pr-4 py-3.5 border border-slate-200 rounded-xl bg-slate-50/50 text-slate-900 placeholder-slate-450 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white transition" placeholder="Masukkan kata sandi">
+                  </div>
+                </div>
+
+                <div class="flex items-center">
+                  <input id="remember-me" name="remember-me" type="checkbox" checked class="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded">
+                  <label for="remember-me" class="ml-2 block text-sm text-slate-600 font-medium">Ingat saya di perangkat ini</label>
+                </div>
+
+                <div>
+                  <button type="submit" class="w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-semibold rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-lg shadow-emerald-600/15 transition-all">
+                    Masuk ke LMS
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGuruDashboard() {
+      const activeClass = "bg-emerald-50 border-r-4 border-emerald-600 text-emerald-700 font-semibold w-full text-left";
+      const inactiveClass = "text-slate-600 hover:bg-slate-50 hover:text-slate-900 w-full text-left";
+
+      return `
+        <div class="flex-1 flex min-h-screen relative">
+          <!-- Sidebar Guru -->
+          <aside class="hidden lg:flex lg:flex-col lg:w-64 border-r border-slate-200 bg-white min-h-screen shrink-0">
+            <div class="p-6 border-b border-slate-100 flex items-center gap-3">
+              <div class="bg-emerald-600 p-2 rounded-xl text-white">
+                <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-md font-bold text-slate-900 leading-none">LD4 LMS</span>
+                <span class="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Portal Guru
+                </span>
+              </div>
+            </div>
+
+            <div class="p-4 mx-4 my-4 bg-slate-50 rounded-xl flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+                G
+              </div>
+              <div class="overflow-hidden">
+                <p class="text-xs text-slate-400">Guru Terpilih</p>
+                <h4 class="text-sm font-bold text-slate-800 truncate">${state.currentUser.nama_lengkap}</h4>
+              </div>
+            </div>
+
+            <nav class="flex-1 px-3 space-y-1">
+              <button onclick="switchView('guru_dashboard', 'home')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'home' ? activeClass : inactiveClass}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+              </button>
+              <button onclick="switchView('guru_dashboard', 'materi')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'materi' ? activeClass : inactiveClass}">
+                <i data-lucide="book-open" class="w-5 h-5"></i> Kelola Materi
+              </button>
+              <button onclick="switchView('guru_dashboard', 'tugas')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'tugas' ? activeClass : inactiveClass}">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i> Kelola Tugas
+              </button>
+              <button onclick="switchView('guru_dashboard', 'koreksi')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'koreksi' ? activeClass : inactiveClass}">
+                <i data-lucide="check-square" class="w-5 h-5"></i> Koreksi & Nilai
+              </button>
+              <button onclick="switchView('guru_dashboard', 'siswa')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'siswa' ? activeClass : inactiveClass}">
+                <i data-lucide="users" class="w-5 h-5"></i> Kelola Siswa
+              </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-100">
+              <button onclick="handleLogout()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-rose-100 text-rose-600 hover:bg-rose-50 transition font-medium text-sm">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+              </button>
+            </div>
+          </aside>
+
+          <!-- Main Content -->
+          <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
+            <div id="loading-overlay" class="absolute inset-0 bg-white/85 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center">
+              <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="text-sm font-semibold text-slate-700">Memproses perubahan data cloud...</p>
+            </div>
+
+            <header class="bg-white border-b border-slate-200 h-16 px-6 flex items-center justify-between z-10 shadow-sm">
+              <div class="flex items-center gap-3 lg:hidden">
+                <button onclick="toggleMobileMenu()" class="p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg">
+                  <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <span class="text-lg font-bold text-slate-900">LD4 LMS</span>
+              </div>
+              
+              <div class="hidden lg:flex items-center gap-2 text-sm text-slate-500">
+                <span class="font-medium text-slate-700">LD4 LMS</span>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span class="capitalize font-semibold text-emerald-650">${state.activeSubView}</span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                ${IS_PREVIEW 
+                  ? `<span class="bg-amber-100 text-amber-800 text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1"><span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span> Mode Pratinjau</span>` 
+                  : `<span class="bg-emerald-100 text-emerald-800 text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Live Server</span>`
+                }
+                <div class="lg:hidden w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-emerald-700 text-xs">G</div>
+              </div>
+            </header>
+
+            <div id="dashboard-body" class="flex-1 overflow-y-auto p-6 max-w-7xl w-full mx-auto fade-in">
+              ${renderGuruSubView()}
+            </div>
+          </main>
+        </div>
+
+        <!-- Drawer Menu Ponsel -->
+        <div id="mobile-sidebar" class="fixed inset-0 bg-slate-900/40 z-50 transition-opacity duration-300 pointer-events-none opacity-0 flex justify-start lg:hidden">
+          <div class="w-72 bg-white h-full flex flex-col shadow-2xl transition-transform duration-300 transform -translate-x-full">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+              <span class="text-xl font-bold text-slate-900">LD4 LMS</span>
+              <button onclick="toggleMobileMenu()" class="p-1 rounded-lg hover:bg-slate-50"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <nav class="flex-1 p-4 space-y-1">
+              <button onclick="toggleMobileMenu(); switchView('guru_dashboard', 'home')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'home' ? activeClass : inactiveClass}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+              </button>
+              <button onclick="toggleMobileMenu(); switchView('guru_dashboard', 'materi')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'materi' ? activeClass : inactiveClass}">
+                <i data-lucide="book-open" class="w-5 h-5"></i> Kelola Materi
+              </button>
+              <button onclick="toggleMobileMenu(); switchView('guru_dashboard', 'tugas')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'tugas' ? activeClass : inactiveClass}">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i> Kelola Tugas
+              </button>
+              <button onclick="toggleMobileMenu(); switchView('guru_dashboard', 'koreksi')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'koreksi' ? activeClass : inactiveClass}">
+                <i data-lucide="check-square" class="w-5 h-5"></i> Koreksi & Nilai
+              </button>
+              <button onclick="toggleMobileMenu(); switchView('guru_dashboard', 'siswa')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'siswa' ? activeClass : inactiveClass}">
+                <i data-lucide="users" class="w-5 h-5"></i> Kelola Siswa
+              </button>
+            </nav>
+            <div class="p-4 border-t border-slate-100">
+              <button onclick="toggleMobileMenu(); handleLogout()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-rose-100 text-rose-600 hover:bg-rose-50 transition font-semibold text-sm">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleMobileMenu() {
+      const ms = document.getElementById("mobile-sidebar");
+      if (ms.classList.contains("opacity-0")) {
+        ms.classList.remove("opacity-0", "pointer-events-none");
+        ms.firstElementChild.classList.remove("-translate-x-full");
+      } else {
+        ms.classList.add("opacity-0", "pointer-events-none");
+        ms.firstElementChild.classList.add("-translate-x-full");
+      }
+    }
+
+    function renderGuruSubView() {
+      switch (state.activeSubView) {
+        case "home": return renderGuruHome();
+        case "materi": return renderGuruMateri();
+        case "tugas": return renderGuruTugas();
+        case "koreksi": return renderGuruKoreksi();
+        case "siswa": return renderGuruSiswa();
+        default: return renderGuruHome();
+      }
+    }
+
+    function renderGuruHome() {
+      const totalSiswa = db.users.filter(u => u.role === "siswa").length;
+      const totalMateri = db.materi.length;
+      const totalTugas = db.tugas.length;
+      const totalPerluKoreksi = db.pengumpulan_tugas.filter(p => p.status === "Belum Dinilai").length;
+
+      return `
+        <div class="space-y-6">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Selamat datang kembali, ${state.currentUser.nama_lengkap}</h2>
+            <p class="text-sm text-slate-500 font-medium">Berikut adalah rangkuman dashboard kelas digital LD4 LMS hari ini.</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
+              <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600"><i data-lucide="users" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Siswa Aktif</p>
+                <h4 class="text-2xl font-extrabold text-slate-900">${totalSiswa}</h4>
+              </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
+              <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600"><i data-lucide="book-open" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Modul Materi</p>
+                <h4 class="text-2xl font-extrabold text-slate-900">${totalMateri}</h4>
+              </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
+              <div class="p-3 bg-teal-50 rounded-xl text-teal-600"><i data-lucide="clipboard-list" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tugas Dibuat</p>
+                <h4 class="text-2xl font-extrabold text-slate-900">${totalTugas}</h4>
+              </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
+              <div class="p-3 bg-amber-50 rounded-xl text-amber-600"><i data-lucide="bell" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Perlu Diperiksa</p>
+                <h4 class="text-2xl font-extrabold text-slate-900">${totalPerluKoreksi}</h4>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+              <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm">
+                <h3 class="text-md font-bold text-slate-900 mb-4">Pengumuman Terpasang</h3>
+                <div class="space-y-3">
+                  ${db.pengumuman.map(item => `
+                    <div class="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition">
+                      <div class="flex items-start justify-between gap-4">
+                        <div>
+                          <h4 class="font-bold text-slate-800 text-sm">${item.judul}</h4>
+                          <p class="text-xs text-slate-500 mt-1 leading-relaxed">${item.isi_pengumuman}</p>
+                        </div>
+                        <button onclick="hapusPengumuman('${item.id}')" class="text-rose-600 hover:text-rose-800 transition p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                      </div>
+                      <div class="mt-2.5 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
+                        <i data-lucide="calendar" class="w-3 h-3"></i> ${item.tanggal_dibuat}
+                      </div>
+                    </div>
+                  `).join("")}
+                  ${db.pengumuman.length === 0 ? `<p class="text-slate-500 text-sm text-center py-6">Belum ada pengumuman kelas.</p>` : ""}
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm h-fit">
+              <h3 class="text-md font-bold text-slate-900 mb-4">Buat Pengumuman Baru</h3>
+              <form onsubmit="event.preventDefault(); simpanPengumuman();" class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600">Judul Pengumuman</label>
+                  <input type="text" id="p-judul" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Tulis judul info">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-600">Isi Informasi</label>
+                  <textarea id="p-isi" rows="4" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Tulis isi pengumuman secara singkat..."></textarea>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3.5 rounded-xl shadow-lg shadow-emerald-600/10 transition">Terbitkan Pengumuman</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function simpanPengumuman() {
+      const judul = document.getElementById("p-judul").value;
+      const isi = document.getElementById("p-isi").value;
+      const tgl = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const newP = { id: "N" + String(db.pengumuman.length + 1).padStart(3, '0'), judul, isi_pengumuman: isi, tanggal_dibuat: tgl };
+
+      if (IS_PREVIEW) {
+        db.pengumuman.unshift(newP);
+        showToast("Pengumuman berhasil diterbitkan!");
+        switchView("guru_dashboard", "home");
+      } else {
+        showLoadingState(true, "Menyimpan data...");
+        try {
+          const res = await callGAS("addPengumuman", newP);
+          showLoadingState(false);
+          if (res && res.success) {
+            db.pengumuman = res.pengumuman;
+            showToast("Pengumuman berhasil diterbitkan!");
+            switchView("guru_dashboard", "home");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal menyimpan data pengumuman.", "error");
+        }
+      }
+    }
+
+    async function hapusPengumuman(id) {
+      if (IS_PREVIEW) {
+        db.pengumuman = db.pengumuman.filter(item => item.id !== id);
+        showToast("Pengumuman berhasil dihapus.", "info");
+        switchView("guru_dashboard", "home");
+      } else {
+        showLoadingState(true, "Menghapus pengumuman...");
+        try {
+          const res = await callGAS("deletePengumuman", { id });
+          showLoadingState(false);
+          if (res && res.success) {
+            db.pengumuman = res.pengumuman;
+            showToast("Pengumuman berhasil dihapus.", "info");
+            switchView("guru_dashboard", "home");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal menghapus pengumuman.", "error");
+        }
+      }
+    }
+
+    function renderGuruMateri() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-4">
+            <h3 class="text-lg font-bold text-slate-900">Daftar Modul Belajar</h3>
+            <div class="space-y-4">
+              ${db.materi.map(item => `
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h4 class="font-bold text-slate-800 text-md">${item.judul}</h4>
+                      <p class="text-xs text-slate-400 mt-1">Diterbitkan: ${item.tanggal_dibuat}</p>
+                    </div>
+                    <button onclick="hapusMateri('${item.id}')" class="text-rose-500 hover:text-rose-700 transition p-1"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                  </div>
+                  <p class="text-sm text-slate-600 leading-relaxed">${item.deskripsi}</p>
+                  
+                  <div class="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+                    ${item.video_url ? `<a href="${item.video_url}" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 font-semibold text-xs border border-red-100"><i data-lucide="youtube" class="w-4 h-4"></i> Link Video</a>` : ""}
+                    ${item.file_drive_url ? `<a href="${item.file_drive_url}" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs border border-emerald-100"><i data-lucide="file-text" class="w-4 h-4"></i> Lampiran Dokumen</a>` : ""}
+                  </div>
+                </div>
+              `).join("")}
+              ${db.materi.length === 0 ? `<p class="text-slate-500 text-sm text-center py-12 bg-white rounded-2xl border border-dashed">Belum ada modul materi pembelajaran.</p>` : ""}
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm h-fit">
+            <h3 class="text-lg font-bold text-slate-900 mb-4">Buat Materi Baru</h3>
+            <form onsubmit="event.preventDefault(); simpanMateri();" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Judul Materi</label>
+                <input type="text" id="m-judul" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Judul materi">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Deskripsi Modul</label>
+                <textarea id="m-deskripsi" rows="3" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Penjelasan isi materi..."></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Embed URL Video (YouTube)</label>
+                <input type="url" id="m-video" class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Contoh: https://www.youtube.com/embed/...">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Link Berkas (Google Drive)</label>
+                <input type="url" id="m-file" class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Link tautan file referensi">
+              </div>
+              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3.5 rounded-xl shadow-lg shadow-emerald-600/10 transition">Terbitkan Materi</button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    async function simpanMateri() {
+      const judul = document.getElementById("m-judul").value;
+      const deskripsi = document.getElementById("m-deskripsi").value;
+      const video_url = document.getElementById("m-video").value;
+      const file_drive_url = document.getElementById("m-file").value;
+      const tgl = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const newM = { id: "M" + String(db.materi.length + 1).padStart(3, '0'), judul, deskripsi, video_url, file_drive_url, tanggal_dibuat: tgl };
+
+      if (IS_PREVIEW) {
+        db.materi.unshift(newM);
+        showToast("Materi pembelajaran berhasil dirilis!");
+        switchView("guru_dashboard", "materi");
+      } else {
+        showLoadingState(true, "Menyimpan data...");
+        try {
+          const res = await callGAS("addMateri", newM);
+          showLoadingState(false);
+          if (res && res.success) {
+            db.materi = res.materi;
+            showToast("Materi pembelajaran berhasil dirilis!");
+            switchView("guru_dashboard", "materi");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal merilis materi.", "error");
+        }
+      }
+    }
+
+    async function hapusMateri(id) {
+      if (IS_PREVIEW) {
+        db.materi = db.materi.filter(m => m.id !== id);
+        showToast("Materi berhasil dihapus.", "info");
+        switchView("guru_dashboard", "materi");
+      } else {
+        showLoadingState(true, "Menghapus data...");
+        try {
+          const res = await callGAS("deleteMateri", { id });
+          showLoadingState(false);
+          if (res && res.success) {
+            db.materi = res.materi;
+            showToast("Materi berhasil dihapus.", "info");
+            switchView("guru_dashboard", "materi");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal menghapus materi.", "error");
+        }
+      }
+    }
+
+    function renderGuruTugas() {
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-4">
+            <h3 class="text-lg font-bold text-slate-900">Daftar Evaluasi Tugas</h3>
+            <div class="space-y-4">
+              ${db.tugas.map(item => `
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h4 class="font-bold text-slate-800 text-md">${item.judul}</h4>
+                      <p class="text-xs text-rose-600 font-bold mt-1">Batas Pengumpulan: ${item.tenggat_waktu.replace('T', ' ')}</p>
+                    </div>
+                    <button onclick="hapusTugas('${item.id}')" class="text-rose-500 hover:text-rose-700 transition p-1"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                  </div>
+                  <p class="text-sm text-slate-600 leading-relaxed">${item.deskripsi}</p>
+                  
+                  ${item.file_pendukung_url ? `
+                    <div class="pt-2 border-t border-slate-100">
+                      <a href="${item.file_pendukung_url}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-xs border border-emerald-100"><i data-lucide="link" class="w-4 h-4"></i> Unduh File Referensi</a>
+                    </div>
+                  ` : ""}
+                </div>
+              `).join("")}
+              ${db.tugas.length === 0 ? `<p class="text-slate-500 text-sm text-center py-12 bg-white rounded-2xl border border-dashed">Belum ada tugas siswa.</p>` : ""}
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm h-fit">
+            <h3 class="text-lg font-bold text-slate-900 mb-4">Buat Tugas Baru</h3>
+            <form onsubmit="event.preventDefault(); simpanTugas();" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Judul Tugas</label>
+                <input type="text" id="t-judul" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Masukkan nama tugas">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Instruksi Detail</label>
+                <textarea id="t-deskripsi" rows="4" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Rincian instruksi kerja..."></textarea>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Deadline (Tenggat Waktu)</label>
+                <input type="datetime-local" id="t-deadline" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Link Berkas Lampiran Pendukung</label>
+                <input type="url" id="t-file" class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Tautan referensi pendukung">
+              </div>
+              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3.5 rounded-xl shadow-lg shadow-emerald-600/10 transition">Terbitkan Tugas</button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    async function simpanTugas() {
+      const judul = document.getElementById("t-judul").value;
+      const deskripsi = document.getElementById("t-deskripsi").value;
+      const tenggat_waktu = document.getElementById("t-deadline").value;
+      const file_pendukung_url = document.getElementById("t-file").value;
+      const tgl = new Date().toISOString().replace('T', ' ').substring(0, 16);
+      const newT = { id: "T" + String(db.tugas.length + 1).padStart(3, '0'), judul, deskripsi, tenggat_waktu, file_pendukung_url, tanggal_dibuat: tgl };
+
+      if (IS_PREVIEW) {
+        db.tugas.unshift(newT);
+        showToast("Tugas baru berhasil diterbitkan!");
+        switchView("guru_dashboard", "tugas");
+      } else {
+        showLoadingState(true, "Menyimpan data...");
+        try {
+          const res = await callGAS("addTugas", newT);
+          showLoadingState(false);
+          if (res && res.success) {
+            db.tugas = res.tugas;
+            showToast("Tugas baru berhasil diterbitkan!");
+            switchView("guru_dashboard", "tugas");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal menyimpan data tugas.", "error");
+        }
+      }
+    }
+
+    async function hapusTugas(id) {
+      if (IS_PREVIEW) {
+        db.tugas = db.tugas.filter(t => t.id !== id);
+        showToast("Tugas berhasil dihapus.", "info");
+        switchView("guru_dashboard", "tugas");
+      } else {
+        showLoadingState(true, "Menghapus data...");
+        try {
+          const res = await callGAS("deleteTugas", { id });
+          showLoadingState(false);
+          if (res && res.success) {
+            db.tugas = res.tugas;
+            showToast("Tugas berhasil dihapus.", "info");
+            switchView("guru_dashboard", "tugas");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal menghapus tugas.", "error");
+        }
+      }
+    }
+
+    function renderGuruKoreksi() {
+      const submissions = db.pengumpulan_tugas;
+      return `
+        <div class="space-y-6">
+          <h3 class="text-lg font-bold text-slate-900">Koreksi & Penilaian Lembar Kerja Siswa</h3>
+          
+          <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th class="p-4">Nama / Kelas</th>
+                    <th class="p-4">Tugas</th>
+                    <th class="p-4">Dikirim Pada</th>
+                    <th class="p-4">Nilai</th>
+                    <th class="p-4">Status</th>
+                    <th class="p-4 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm font-medium">
+                  ${submissions.map(item => `
+                    <tr>
+                      <td class="p-4">
+                        <div class="font-bold text-slate-800">${item.siswa_nama}</div>
+                        <div class="text-xs text-slate-500">${item.siswa_kelas}</div>
+                      </td>
+                      <td class="p-4 text-slate-700 max-w-xs truncate">${item.tugas_judul}</td>
+                      <td class="p-4 text-xs text-slate-500">${item.tanggal_dikirim}</td>
+                      <td class="p-4">
+                        <span class="font-extrabold text-sm ${item.nilai ? 'text-emerald-600' : 'text-slate-400'}">${item.nilai || "-"}</span>
+                      </td>
+                      <td class="p-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${item.status === 'Selesai' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+                          ${item.status}
+                        </span>
+                      </td>
+                      <td class="p-4 text-center">
+                        <button onclick="bukaModalPenilaian('${item.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow transition">Koreksi</button>
+                      </td>
+                    </tr>
+                  `).join("")}
+                  ${submissions.length === 0 ? `<tr><td colspan="6" class="p-8 text-center text-slate-500">Belum ada penyerahan tugas siswa.</td></tr>` : ""}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="modal-nilai" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4">
+          <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="tutupModalPenilaian()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition"><i data-lucide="x" class="w-6 h-6"></i></button>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Form Koreksi Tugas</h3>
+            <p class="text-xs text-slate-400 mb-5">Periksa kesesuaian lampiran lalu berikan penilaian.</p>
+            <div id="modal-nilai-content" class="space-y-4"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function bukaModalPenilaian(id) {
+      const item = db.pengumpulan_tugas.find(p => p.id === id);
+      state.selectedItem = item;
+      const modal = document.getElementById("modal-nilai");
+      const content = document.getElementById("modal-nilai-content");
+
+      content.innerHTML = `
+        <div class="bg-slate-50 p-4 rounded-xl space-y-2 text-sm border">
+          <p class="text-slate-600"><strong>Nama Siswa:</strong> ${item.siswa_nama} (${item.siswa_kelas})</p>
+          <p class="text-slate-600"><strong>Tugas:</strong> ${item.tugas_judul}</p>
+          <p class="text-slate-600"><strong>Catatan Siswa:</strong> ${item.feedback || "-"}</p>
+          <div class="pt-2">
+            <a href="${item.file_tugas_url}" target="_blank" class="w-full text-center flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-700 font-bold py-2.5 rounded-xl transition text-xs">
+              <i data-lucide="external-link" class="w-4 h-4"></i> Buka File Jawaban Siswa
+            </a>
+          </div>
+        </div>
+
+        <form onsubmit="event.preventDefault(); simpanNilai();" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600">Skor Nilai (0-100)</label>
+            <input type="number" id="v-nilai" min="0" max="100" value="${item.nilai}" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Contoh: 90">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600">Umpan Balik Guru</label>
+            <textarea id="v-feedback" rows="3" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Tulis feedback evaluasi...">${item.feedback}</textarea>
+          </div>
+          <div class="flex gap-3">
+            <button type="button" onclick="tutupModalPenilaian()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold py-3 rounded-xl transition">Batal</button>
+            <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3 rounded-xl shadow-lg shadow-emerald-600/15 transition">Simpan & Selesai</button>
+          </div>
+        </form>
+      `;
+
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      lucide.createIcons();
+    }
+
+    function tutupModalPenilaian() {
+      const modal = document.getElementById("modal-nilai");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      state.selectedItem = null;
+    }
+
+    async function simpanNilai() {
+      const nilai = document.getElementById("v-nilai").value;
+      const feedback = document.getElementById("v-feedback").value;
+      
+      if (IS_PREVIEW) {
+        state.selectedItem.nilai = nilai;
+        state.selectedItem.feedback = feedback;
+        state.selectedItem.status = "Selesai";
+        showToast("Nilai tugas berhasil diperbarui!");
+        tutupModalPenilaian();
+        switchView("guru_dashboard", "koreksi");
+      } else {
+        showLoadingState(true, "Menyimpan penilaian...");
+        try {
+          const res = await callGAS("updateNilai", { submissionId: state.selectedItem.id, nilai, feedback });
+          showLoadingState(false);
+          if (res && res.success) {
+            db.pengumpulan_tugas = res.pengumpulan_tugas;
+            showToast("Nilai tugas berhasil diperbarui!");
+            tutupModalPenilaian();
+            switchView("guru_dashboard", "koreksi");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal menyimpan data nilai.", "error");
+        }
+      }
+    }
+
+    function renderGuruSiswa() {
+      const daftarSiswa = db.users.filter(u => u.role === "siswa");
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 space-y-4">
+            <h3 class="text-lg font-bold text-slate-900">Database Siswa Terdaftar</h3>
+            
+            <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      <th class="p-4">ID Siswa</th>
+                      <th class="p-4">Nama Lengkap</th>
+                      <th class="p-4">Kelas</th>
+                      <th class="p-4">Username</th>
+                      <th class="p-4 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100 text-sm">
+                    ${daftarSiswa.map(item => `
+                      <tr>
+                        <td class="p-4 font-bold text-slate-400">${item.id}</td>
+                        <td class="p-4 font-semibold text-slate-800">${item.nama_lengkap}</td>
+                        <td class="p-4 text-slate-600">${item.kelas}</td>
+                        <td class="p-4 text-slate-500">${item.username}</td>
+                        <td class="p-4 text-center">
+                          <button onclick="hapusSiswa('${item.id}')" class="text-rose-600 hover:text-rose-800 transition p-1"><i data-lucide="user-minus" class="w-4.5 h-4.5"></i></button>
+                        </td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm h-fit">
+            <h3 class="text-lg font-bold text-slate-900 mb-4">Daftarkan Siswa Baru</h3>
+            <form onsubmit="event.preventDefault(); simpanSiswa();" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Nama Lengkap</label>
+                <input type="text" id="s-nama" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Nama lengkap siswa">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Kelas</label>
+                <input type="text" id="s-kelas" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Contoh: XI-RPL-1">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Username Akun</label>
+                <input type="text" id="s-username" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Username login">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600">Kata Sandi</label>
+                <input type="text" id="s-password" required class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Kata sandi akun">
+              </div>
+              <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3.5 rounded-xl shadow-lg shadow-emerald-600/10 transition">Simpan Data Siswa</button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    async function simpanSiswa() {
+      const nama_lengkap = document.getElementById("s-nama").value;
+      const kelas = document.getElementById("s-kelas").value;
+      const username = document.getElementById("s-username").value;
+      const password = document.getElementById("s-password").value;
+      const id = "U" + String(db.users.length + 1).padStart(3, '0');
+      const newS = { id, username, password, nama_lengkap, role: "siswa", kelas };
+
+      if (IS_PREVIEW) {
+        db.users.push(newS);
+        showToast("Akun siswa baru berhasil didaftarkan!");
+        switchView("guru_dashboard", "siswa");
+      } else {
+        showLoadingState(true, "Mendaftarkan...");
+        try {
+          const res = await callGAS("addSiswa", newS);
+          showLoadingState(false);
+          if (res && res.success) {
+            db.users = res.users;
+            showToast("Akun siswa baru berhasil didaftarkan!");
+            switchView("guru_dashboard", "siswa");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal mendaftarkan akun siswa.", "error");
+        }
+      }
+    }
+
+    async function hapusSiswa(id) {
+      if (IS_PREVIEW) {
+        db.users = db.users.filter(u => u.id !== id);
+        showToast("Data siswa berhasil dihapus.", "info");
+        switchView("guru_dashboard", "siswa");
+      } else {
+        showLoadingState(true, "Menghapus data...");
+        try {
+          const res = await callGAS("deleteSiswa", { id });
+          showLoadingState(false);
+          if (res && res.success) {
+            db.users = res.users;
+            showToast("Data siswa berhasil dihapus.", "info");
+            switchView("guru_dashboard", "siswa");
+          }
+        } catch (err) {
+          showLoadingState(false);
+          showToast("Gagal menghapus data siswa.", "error");
+        }
+      }
+    }
+
+    function renderSiswaDashboard() {
+      const activeClass = "bg-emerald-50 border-r-4 border-emerald-600 text-emerald-700 font-semibold w-full text-left";
+      const inactiveClass = "text-slate-600 hover:bg-slate-50 hover:text-slate-900 w-full text-left";
+
+      return `
+        <div class="flex-1 flex min-h-screen relative">
+          <!-- Sidebar Siswa -->
+          <aside class="hidden lg:flex lg:flex-col lg:w-64 border-r border-slate-200 bg-white min-h-screen shrink-0">
+            <div class="p-6 border-b border-slate-100 flex items-center gap-3">
+              <div class="bg-emerald-600 p-2 rounded-xl text-white">
+                <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+              </div>
+              <div class="flex flex-col">
+                <span class="text-md font-bold text-slate-900 leading-none">LD4 LMS</span>
+                <span class="text-[10px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Portal Siswa
+                </span>
+              </div>
+            </div>
+
+            <div class="p-4 mx-4 my-4 bg-slate-50 rounded-xl flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+                S
+              </div>
+              <div class="overflow-hidden">
+                <p class="text-xs text-slate-400">Kelas: ${state.currentUser.kelas}</p>
+                <h4 class="text-sm font-bold text-slate-800 truncate">${state.currentUser.nama_lengkap}</h4>
+              </div>
+            </div>
+
+            <nav class="flex-1 px-3 space-y-1">
+              <button onclick="switchView('siswa_dashboard', 'home')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'home' ? activeClass : inactiveClass}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+              </button>
+              <button onclick="switchView('siswa_dashboard', 'materi')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'materi' ? activeClass : inactiveClass}">
+                <i data-lucide="book-open" class="w-5 h-5"></i> Materi Pembelajaran
+              </button>
+              <button onclick="switchView('siswa_dashboard', 'tugas')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'tugas' ? activeClass : inactiveClass}">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i> Tugas Saya
+              </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-100">
+              <button onclick="handleLogout()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-rose-100 text-rose-600 hover:bg-rose-50 transition font-medium text-sm">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+              </button>
+            </div>
+          </aside>
+
+          <!-- Main Content Siswa -->
+          <main class="flex-1 flex flex-col min-w-0 bg-slate-50 relative">
+            <div id="loading-overlay" class="absolute inset-0 bg-white/85 backdrop-blur-sm z-50 hidden flex flex-col items-center justify-center">
+              <div class="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p class="text-sm font-semibold text-slate-700">Mengirim data tugas ke database...</p>
+            </div>
+
+            <header class="bg-white border-b border-slate-200 h-16 px-6 flex items-center justify-between z-10 shadow-sm">
+              <div class="flex items-center gap-3 lg:hidden">
+                <button onclick="toggleMobileMenuSiswa()" class="p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg">
+                  <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <span class="text-lg font-bold text-slate-900">LD4 LMS</span>
+              </div>
+              
+              <div class="hidden lg:flex items-center gap-2 text-sm text-slate-500">
+                <span class="font-medium text-slate-700">LMS Sekolah</span>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                <span class="capitalize font-semibold text-emerald-650">${state.activeSubView}</span>
+              </div>
+
+              <div class="flex items-center gap-4">
+                ${IS_PREVIEW 
+                  ? `<span class="bg-amber-100 text-amber-800 text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1"><span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span> Mode Pratinjau</span>` 
+                  : `<span class="bg-emerald-100 text-emerald-800 text-xs px-3 py-1.5 rounded-full font-bold flex items-center gap-1"><span class="w-2 h-2 bg-emerald-500 rounded-full"></span> Live Server</span>`
+                }
+                <div class="lg:hidden w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center font-bold text-emerald-700 text-xs">S</div>
+              </div>
+            </header>
+
+            <div id="dashboard-body-siswa" class="flex-1 overflow-y-auto p-6 max-w-7xl w-full mx-auto fade-in">
+              ${renderSiswaSubView()}
+            </div>
+          </main>
+        </div>
+
+        <!-- Drawer Ponsel Siswa -->
+        <div id="mobile-sidebar-siswa" class="fixed inset-0 bg-slate-900/40 z-50 transition-opacity duration-300 pointer-events-none opacity-0 flex justify-start lg:hidden">
+          <div class="w-72 bg-white h-full flex flex-col shadow-2xl transition-transform duration-300 transform -translate-x-full">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+              <span class="text-xl font-bold text-slate-900">LD4 LMS</span>
+              <button onclick="toggleMobileMenuSiswa()" class="p-1 rounded-lg hover:bg-slate-50"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <nav class="flex-1 p-4 space-y-1">
+              <button onclick="toggleMobileMenuSiswa(); switchView('siswa_dashboard', 'home')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'home' ? activeClass : inactiveClass}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+              </button>
+              <button onclick="toggleMobileMenuSiswa(); switchView('siswa_dashboard', 'materi')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'materi' ? activeClass : inactiveClass}">
+                <i data-lucide="book-open" class="w-5 h-5"></i> Materi Pembelajaran
+              </button>
+              <button onclick="toggleMobileMenuSiswa(); switchView('siswa_dashboard', 'tugas')" class="flex items-center gap-3 px-4 py-3 rounded-xl transition ${state.activeSubView === 'tugas' ? activeClass : inactiveClass}">
+                <i data-lucide="clipboard-list" class="w-5 h-5"></i> Tugas Saya
+              </button>
+            </nav>
+            <div class="p-4 border-t border-slate-100">
+              <button onclick="toggleMobileMenuSiswa(); handleLogout()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-rose-100 text-rose-600 hover:bg-rose-50 transition font-semibold text-sm">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleMobileMenuSiswa() {
+      const ms = document.getElementById("mobile-sidebar-siswa");
+      if (ms.classList.contains("opacity-0")) {
+        ms.classList.remove("opacity-0", "pointer-events-none");
+        ms.firstElementChild.classList.remove("-translate-x-full");
+      } else {
+        ms.classList.add("opacity-0", "pointer-events-none");
+        ms.firstElementChild.classList.add("-translate-x-full");
+      }
+    }
+
+    function renderSiswaSubView() {
+      switch (state.activeSubView) {
+        case "home": return renderSiswaHome();
+        case "materi": return renderSiswaMateri();
+        case "tugas": return renderSiswaTugas();
+        default: return renderSiswaHome();
+      }
+    }
+
+    function renderSiswaHome() {
+      const totalMateri = db.materi.length;
+      const totalTugas = db.tugas.length;
+      const submittedTugas = db.pengumpulan_tugas.filter(p => p.siswa_id === state.currentUser.id).length;
+      const remainingTugas = totalTugas - submittedTugas;
+
+      return `
+        <div class="space-y-6">
+          <div class="bg-gradient-to-tr from-emerald-700 to-emerald-500 rounded-3xl p-6 md:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+            <div class="space-y-2 z-10">
+              <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight">Selamat Belajar, ${state.currentUser.nama_lengkap}</h2>
+              <p class="text-emerald-100 text-sm max-w-lg font-medium">Tetap semangat! Kerjakan seluruh modul latihan dan perbanyak membaca referensi tugas untuk hasil maksimal.</p>
+            </div>
+            <div class="bg-white/10 p-4 rounded-2xl backdrop-blur-md border border-white/10 z-10 w-full md:w-auto flex flex-row md:flex-col gap-4 text-center">
+              <div>
+                <span class="text-2xl font-black">${remainingTugas}</span>
+                <p class="text-[10px] uppercase font-bold text-emerald-200 tracking-wider mt-0.5">Sisa Tugas</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
+              <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600"><i data-lucide="book-open" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400">Total Modul</p>
+                <h4 class="text-2xl font-extrabold text-slate-900">${totalMateri}</h4>
+              </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
+              <div class="p-3 bg-emerald-50 rounded-xl text-emerald-600"><i data-lucide="check-square" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400">Tugas Dikirim</p>
+                <h4 class="text-2xl font-extrabold text-slate-900">${submittedTugas}</h4>
+              </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
+              <div class="p-3 bg-teal-50 rounded-xl text-teal-600"><i data-lucide="clock" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-xs font-semibold text-slate-400">Tugas Belum Dikirim</p>
+                <h4 class="text-2xl font-extrabold text-slate-900">${remainingTugas}</h4>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm">
+            <h3 class="text-md font-bold text-slate-900 mb-4 flex items-center gap-2"><i data-lucide="bell" class="w-5 h-5 text-emerald-600"></i> Pengumuman Sekolah</h3>
+            <div class="space-y-4">
+              ${db.pengumuman.map(item => `
+                <div class="p-4 rounded-xl border border-slate-50 bg-slate-50/50">
+                  <h4 class="font-bold text-slate-800 text-sm">${item.judul}</h4>
+                  <p class="text-xs text-slate-500 mt-1 leading-relaxed">${item.isi_pengumuman}</p>
+                  <div class="mt-2.5 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Diterbitkan: ${item.tanggal_dibuat}
+                  </div>
+                </div>
+              `).join("")}
+              ${db.pengumuman.length === 0 ? `<p class="text-slate-500 text-sm text-center py-6">Tidak ada pengumuman hari ini.</p>` : ""}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSiswaMateri() {
+      return `
+        <div class="space-y-6">
+          <h3 class="text-lg font-bold text-slate-900">Modul Pembelajaran Mandiri</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            ${db.materi.map(item => `
+              <div class="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden flex flex-col justify-between">
+                ${item.video_url ? `
+                  <div class="relative aspect-video w-full bg-slate-900">
+                    <iframe class="absolute inset-0 w-full h-full" src="${item.video_url}" title="Video Pembelajaran" frameborder="0" allowfullscreen></iframe>
+                  </div>
+                ` : `
+                  <div class="aspect-video w-full bg-slate-100 flex flex-col items-center justify-center p-6 text-slate-400">
+                    <i data-lucide="video-off" class="w-12 h-12 mb-2"></i>
+                    <p class="text-xs">Tidak ada lampiran video panduan.</p>
+                  </div>
+                `}
+                
+                <div class="p-6 flex-1 flex flex-col justify-between gap-4">
+                  <div>
+                    <h4 class="font-bold text-slate-800 text-base leading-snug">${item.judul}</h4>
+                    <p class="text-xs text-slate-400 mt-1">Diterbitkan: ${item.tanggal_dibuat}</p>
+                    <p class="text-sm text-slate-600 mt-3 leading-relaxed">${item.deskripsi}</p>
+                  </div>
+                  
+                  ${item.file_drive_url ? `
+                    <div class="pt-4 border-t border-slate-100 flex">
+                      <a href="${item.file_drive_url}" target="_blank" class="w-full text-center flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-xs transition">
+                        <i data-lucide="download-cloud" class="w-4 h-4"></i> Unduh Berkas Lampiran
+                      </a>
+                    </div>
+                  ` : ""}
+                </div>
+              </div>
+            `).join("")}
+            ${db.materi.length === 0 ? `<p class="col-span-full text-slate-500 text-sm text-center py-12 bg-white rounded-2xl border border-dashed">Belum ada modul materi kelas.</p>` : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSiswaTugas() {
+      return `
+        <div class="space-y-6">
+          <h3 class="text-lg font-bold text-slate-900">Tugas Mandiri Saya</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            ${db.tugas.map(item => {
+              const submission = db.pengumpulan_tugas.find(p => p.tugas_id === item.id && p.siswa_id === state.currentUser.id);
+              
+              return `
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-sm flex flex-col justify-between gap-5">
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                      <span class="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 px-3 py-1 rounded-full flex items-center gap-1">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i> Batas: ${item.tenggat_waktu.replace('T', ' ')}
+                      </span>
+                      ${submission 
+                        ? `<span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">Terkirim</span>`
+                        : `<span class="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-100 px-3 py-1 rounded-full">Belum Kirim</span>`
+                      }
+                    </div>
+
+                    <h4 class="font-bold text-slate-800 text-md leading-snug">${item.judul}</h4>
+                    <p class="text-sm text-slate-600 leading-relaxed">${item.deskripsi}</p>
+                    
+                    ${item.file_pendukung_url ? `
+                      <a href="${item.file_pendukung_url}" target="_blank" class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:underline"><i data-lucide="link" class="w-3.5 h-3.5"></i> Berkas Pendukung Tugas</a>
+                    ` : ""}
+                  </div>
+
+                  ${submission && submission.nilai ? `
+                    <div class="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 space-y-2">
+                      <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-emerald-800">Evaluasi Nilai:</span>
+                        <span class="text-xl font-black text-emerald-700">${submission.nilai} / 100</span>
+                      </div>
+                      <p class="text-xs text-slate-500 italic">"${submission.feedback}"</p>
+                    </div>
+                  ` : submission && !submission.nilai ? `
+                    <div class="p-3.5 rounded-xl bg-slate-50 border text-xs text-slate-400 italic text-center">
+                      <i data-lucide="hourglass" class="w-4 h-4 inline-block mr-1.5 align-middle"></i> Sedang dalam penilaian guru...
+                    </div>
+                  ` : ""}
+
+                  ${!submission ? `
+                    <div class="pt-4 border-t border-slate-100">
+                      <button onclick="bukaModalUploadTugas('${item.id}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-xs shadow-lg shadow-emerald-600/15 transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Kirim Berkas Tugas
+                      </button>
+                    </div>
+                  ` : ""}
+                </div>
+              `;
+            }).join("")}
+            ${db.tugas.length === 0 ? `<p class="col-span-full text-slate-500 text-sm text-center py-12 bg-white rounded-2xl border border-dashed">Tidak ada tugas aktif.</p>` : ""}
+          </div>
+        </div>
+
+        <div id="modal-upload" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4">
+          <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="tutupModalUploadTugas()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition"><i data-lucide="x" class="w-6 h-6"></i></button>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Kirim Lembar Tugas</h3>
+            <p class="text-xs text-slate-400 mb-5">Sistem akan otomatis mengirim dokumen ke Cloud Google Drive Guru.</p>
+            <div id="modal-upload-content" class="space-y-4"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function bukaModalUploadTugas(tugasId) {
+      const item = db.tugas.find(t => t.id === tugasId);
+      state.selectedItem = item;
+      const modal = document.getElementById("modal-upload");
+      const content = document.getElementById("modal-upload-content");
+
+      content.innerHTML = `
+        <div class="bg-slate-50 p-4 rounded-xl border space-y-1 text-sm mb-4">
+          <p class="text-slate-800"><strong>Tugas:</strong> ${item.judul}</p>
+          <p class="text-xs text-rose-600 font-semibold">Tenggat: ${item.tenggat_waktu.replace('T', ' ')}</p>
+        </div>
+
+        <form onsubmit="event.preventDefault(); prosesKirimTugas();" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 font-semibold">Pilih Berkas Tugas (PDF/Dokumen/Foto/PNG)</label>
+            <div class="mt-1.5 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 border-dashed rounded-xl bg-slate-50/50 hover:bg-slate-50 transition cursor-pointer relative">
+              <input type="file" id="u-file" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="previewSelectedFileName(this)">
+              <div class="space-y-1 text-center pointer-events-none">
+                <i data-lucide="upload" class="mx-auto h-10 w-10 text-slate-400"></i>
+                <div class="flex text-xs text-slate-600">
+                  <span class="relative font-bold text-emerald-600 hover:text-emerald-500">Klik untuk mencari file</span>
+                </div>
+                <p class="text-[10px] text-slate-400">Ukuran dokumen maks: 10MB</p>
+              </div>
+            </div>
+            <div id="file-selected-name" class="mt-2 text-xs text-emerald-600 font-bold hidden"></div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600">Catatan/Pesan Tambahan ke Guru</label>
+            <textarea id="u-catatan" rows="3" class="mt-1.5 block w-full border border-slate-200 rounded-xl bg-slate-50 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" placeholder="Tulis catatan jika ada..."></textarea>
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button type="button" onclick="tutupModalUploadTugas()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold py-3 rounded-xl transition">Batal</button>
+            <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-3 rounded-xl shadow-lg shadow-emerald-600/15 transition flex items-center justify-center gap-1.5">
+              <i data-lucide="send" class="w-4 h-4"></i> Kirim Tugas
+            </button>
+          </div>
+        </form>
+      `;
+
+      modal.classList.remove("hidden");
+      modal.classList.add("flex");
+      lucide.createIcons();
+    }
+
+    function previewSelectedFileName(input) {
+      const nameDiv = document.getElementById("file-selected-name");
+      if (input.files && input.files[0]) {
+        nameDiv.innerText = `Berkas Terpilih: ${input.files[0].name}`;
+        nameDiv.classList.remove("hidden");
+      } else {
+        nameDiv.classList.add("hidden");
+      }
+    }
+
+    function tutupModalUploadTugas() {
+      const modal = document.getElementById("modal-upload");
+      modal.classList.add("hidden");
+      modal.classList.remove("flex");
+      state.selectedItem = null;
+    }
+
+    function prosesKirimTugas() {
+      const fileInput = document.getElementById("u-file");
+      const catatan = document.getElementById("u-catatan").value;
+      const file = fileInput.files[0];
+      const tgl = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+      if (!file) {
+        showToast("Mohon lampirkan dokumen tugas Anda!", "error");
+        return;
+      }
+
+      if (IS_PREVIEW) {
+        const mockP = {
+          id: "P" + String(db.pengumpulan_tugas.length + 1).padStart(3, '0'),
+          tugas_id: state.selectedItem.id,
+          tugas_judul: state.selectedItem.judul,
+          siswa_id: state.currentUser.id,
+          siswa_nama: state.currentUser.nama_lengkap,
+          siswa_kelas: state.currentUser.kelas,
+          file_tugas_url: "https://drive.google.com/file/d/MockPreviewFile/view",
+          nilai: "",
+          feedback: "",
+          tanggal_dikirim: tgl,
+          status: "Belum Dinilai"
+        };
+        db.pengumpulan_tugas.unshift(mockP);
+        showToast("Tugas berhasil terkirim!");
+        tutupModalUploadTugas();
+        switchView("siswa_dashboard", "tugas");
+      } else {
+        showLoadingState(true, "Mengonversi & mengunggah dokumen Anda ke Google Drive...");
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          const base64Data = e.target.result.split(',')[1];
+          const payload = {
+            tugas_id: state.selectedItem.id,
+            tugas_judul: state.selectedItem.judul,
+            siswa_id: state.currentUser.id,
+            siswa_nama: state.currentUser.nama_lengkap,
+            siswa_kelas: state.currentUser.kelas,
+            catatan: catatan,
+            file_name: `${state.currentUser.nama_lengkap.replace(/\s+/g, '_')}_TUGAS_${Date.now()}.${file.name.split('.').pop()}`,
+            file_mime: file.type,
+            file_base64: base64Data,
+            tanggal_dikirim: tgl
+          };
+
+          try {
+            const res = await callGAS("submitTugas", payload);
+            showLoadingState(false);
+            if (res && res.success) {
+              db.pengumpulan_tugas = res.pengumpulan_tugas;
+              showToast("Tugas Anda berhasil diunggah ke Drive sekolah!");
+              tutupModalUploadTugas();
+              switchView("siswa_dashboard", "tugas");
+            } else {
+              showToast(res ? res.message : "Gagal mengunggah berkas.", "error");
+            }
+          } catch (err) {
+            showLoadingState(false);
+            showToast("Gagal terhubung ke penyimpanan Cloud.", "error");
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function renderApp() {
+      const container = document.getElementById("app-content");
+      
+      switch (state.activeView) {
+        case "login":
+          container.innerHTML = renderLoginView();
+          break;
+        case "guru_dashboard":
+          container.innerHTML = renderGuruDashboard();
+          break;
+        case "siswa_dashboard":
+          container.innerHTML = renderSiswaDashboard();
+          break;
+        default:
+          container.innerHTML = renderLoginView();
+      }
+
+      lucide.createIcons();
+    }
+
+    window.addEventListener("DOMContentLoaded", async function() {
+      if (!IS_PREVIEW) {
+        try {
+          const res = await callGAS("getDashboardData");
+          if (res && res.success) {
+            db = res.db;
+            showToast("Sinkronisasi database berhasil", "success");
+            renderApp();
+          } else {
+            showToast("Memuat cadangan database pratinjau lokal.", "info");
+            renderApp();
+          }
+        } catch (err) {
+          showToast("Koneksi API GAS gagal. Menggunakan data pratinjau.", "info");
+          renderApp();
+        }
+      } else {
+        setTimeout(() => {
+          renderApp();
+        }, 800);
+      }
+    });
+  </script>
+</body>
+</html>
