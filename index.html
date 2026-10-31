@@ -214,7 +214,7 @@
           showToast("Kombinasi Username dan Password Anda tidak valid!", "error");
         }
       } else {
-        showLoadingState(true, "Memvalidasi kredensial masuk...");
+        showLoadingState(true, "Memvalidasi kredensial");
         try {
           const res = await callGAS("login", { username, password });
           showLoadingState(false);
@@ -494,7 +494,7 @@
         <div class="space-y-6">
           <div>
             <h2 class="text-2xl font-bold text-slate-900">Selamat datang kembali, ${state.currentUser.nama_lengkap}</h2>
-            <p class="text-sm text-slate-500 font-medium">Berikut adalah rangkuman dashboard kelas digital LD4 LMS hari ini.</p>
+            <p class="text-sm text-slate-500 font-medium">Berikut adalah rangkuman dashboard kelas digital hari ini.</p>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
